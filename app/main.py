@@ -2,8 +2,24 @@ import socket  # noqa: F401
 import threading
 
 
+def parse_redit_command(data):
+    """Parse a RESP command into a list of strings."""
+    lines = data.split(b"\r\n")
+    command = []
+    idx = 1  # Skip the first line (*2)
+
+    while idx < len(lines) and lines[idx]:
+        if lines[idx].startswith(b"$"):
+            # Get the number of bytes for the next argument
+            length = int(lines[idx][1:])
+            idx += 1  # Move to the actual argument
+            command.append(lines[idx][:length].decode())
+        idx += 1  # Move to the next length/command indicator
+    
+    return command
+
 def handle_client(client_socket):
-    print("Handles communication with a single client.")
+    """Handles communication with a single client."""
     with client_socket:
         print("Client connected, ready to respond to multiple PING commands...")
         while True:
@@ -12,10 +28,23 @@ def handle_client(client_socket):
             if not data:
                 break  # Client disconnected
 
-            print("Received command, sending +PONG response...")
+            command=parse_redit_command(data)
+            print(f"Received command: {command}")
 
-            # Send the hardcoded +PONG\r\n response for each command
-            client_socket.sendall(b"+PONG\r\n")
+            # Check if it's a PING command
+            if command[0].upper() == "PING":
+                response = b"+PONG\r\n"
+
+            # Check if it's an ECHO command
+            elif command[0].upper() == "ECHO" and len(command) > 1:
+                message = command[1]
+                response = f"${len(message)}\r\n{message}\r\n".encode()
+
+            # If command is unrecognized
+            else:
+                response = b"-ERR unknown command\r\n"
+            
+            client_socket.sendall(response)
 
 def main():
     print("Logs from your program will appear here!")
