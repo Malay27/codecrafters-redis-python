@@ -22,6 +22,10 @@ def parse_redis_command(data):
 
     return command
 
+def handle_ping_command():
+    """Handle the PING command."""
+    return b"+PONG\r\n"
+
 def handle_set_command(command):
     """Handle the SET command with optional PX expiry."""
     global store, expiry_times
@@ -111,7 +115,9 @@ def handle_client(client_socket):
             response = b"-ERR unknown command\r\n"
 
             # Process commands
-            if command[0].upper() == "SET":
+            if command[0].upper() == "PING":
+                response = handle_ping_command()
+            elif command[0].upper() == "SET":
                 response = handle_set_command(command)
             elif command[0].upper() == "GET":
                 response = handle_get_command(command)
