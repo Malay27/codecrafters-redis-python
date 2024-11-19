@@ -25,25 +25,37 @@ def parse_redis_command(data):
     return command
 
 def read_size_encoded_value(data, index):
-    """Decode size-encoded values."""
+    """Decode size-encoded values with debug logs."""
     first_byte = data[index]
+    print(f"Decoding size-encoded value: {first_byte:02x} at index {index}")
+    
     if first_byte >> 6 == 0:  # 00xxxxxx
         size = first_byte & 0x3F
+        print(f"Decoded size: {size}")
         return size, index + 1
     elif first_byte >> 6 == 1:  # 01xxxxxx
         size = ((first_byte & 0x3F) << 8) | data[index + 1]
+        print(f"Decoded size: {size}")
         return size, index + 2
     elif first_byte >> 6 == 2:  # 10xxxxxx
         size = struct.unpack(">I", data[index + 1:index + 5])[0]
+        print(f"Decoded size: {size}")
         return size, index + 5
     else:
+        print(f"Error: Unsupported size encoding at byte {first_byte:02x}")
         raise ValueError("Unsupported size encoding")
 
 def read_string(data, index):
-    """Decode a string-encoded value."""
-    size, index = read_size_encoded_value(data, index)
-    string = data[index:index + size].decode()
-    return string, index + size
+    """Decode a string-encoded value with debug logs."""
+    try:
+        size, index = read_size_encoded_value(data, index)
+        string = data[index:index + size].decode()
+        print(f"Decoded string: {string}")
+        return string, index + size
+    except Exception as e:
+        print(f"Error while decoding string at index {index}: {e}")
+        raise
+
 
 def load_rdb_file():
     """Load key-value pairs from the RDB file."""
